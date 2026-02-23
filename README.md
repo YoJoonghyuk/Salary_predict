@@ -4,32 +4,34 @@
 
 Проект состоит из трех основных этапов: **парсинг** исходного CSV в числовые признаки, **обучение** модели линейной регрессии и **предсказание** зарплат на основе подготовленных признаков.
 ##  Структура Репозитория
-/
-* ├── app.py              # Основной скрипт для предсказания зарплат (List[float])
-* ├── parse_data.py        # Скрипт для обработки CSV в .npy признаки
-* ├── train_model.py       # Скрипт для обучения модели Linear Regression
-* ├── README.md          
-* ├── data/            
-* │  ├── hh.csv         
-* │  ├── x_data.npy       # Сохраненные признаки (результат парсинга)
-* │  └── y_data.npy       # Сохраненные целевые значения (результат парсинга)
-* ├── resources/         
-* │  ├── model.pkl        # Обученная модель линейной регрессии
-* │  ├── scaler.pkl       # Обученный Standard Scaler
-* │  └── vectorizer.pkl     # Обученный TF-IDF векторизатор
-* ├── src/             
-* │  ├── base.py         # Базовый класс для Chain of Responsibility
-* │  ├── loaders.py       # Загрузка CSV
-* │  ├── output.py        # Сохранение .npy
-* │  └── transformation.py    # Извлечение и трансформация признаков
-* └── utils/           
-*   ├── helpers.py       # Помощники для работы с DataFrame
-*   └── parsers.py       # Функции для извлечения данных из текстовых полей
+
+* salary_predictor/
+* ├── app.py
+* ├── parse_data.py
+* ├── train_model.py
+* ├── .gitignore
+* ├── README.md
+* ├── docs/ 
+* ├── src/
+* │   ├── base.py
+* │   ├── loaders.py
+* │   ├── npy_loader.py
+* │   ├── predictor_handler.py
+* │   ├── output.py
+* │   └── transformation.py
+* └── utils/
+*  ├── age_parser.py
+*  ├── experience_parser.py
+*  ├── salary_parser.py
+*  ├── city_parser.py
+*  ├── helpers.py
+*  ├── transformer_utils.py
+*  └── outlier_remover.py
 
 ##  Установка Зависимостей
 Убедитесь, что у вас установлен Python 3.8+.
 Установите необходимые библиотеки, используя pip:
-                   ` pip install pandas numpy scikit-learn`
+                   ` pip install pandas numpy scikit-learn joblib`
   ##  Запуск Проекта
 * Шаг 1: **Парсинг данных**
 
@@ -48,4 +50,3 @@
 Этот скрипт загружает x_data.npy (или любой другой .npy файл с аналогично подготовленными признаками), загружает обученную модель из resources/model.pkl и выдает список предсказанных зарплат (List[float]) в консоль.
 
    `python app.py data/x_data.npy`
-   

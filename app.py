@@ -1,65 +1,17 @@
 import argparse
 import os
 import sys
-import pickle
-import numpy as np
 from typing import List
 
-# Константы для путей
-RESOURCES_DIR = 'resources'
-MODEL_PATH = os.path.join(RESOURCES_DIR, 'model.pkl')
+from src.npy_loader import NpyLoader
+from src.predictor_handler import PredictorHandler
 
-def predict_salary(npy_path: str) -> List[float]:
+def run_prediction():
     """
-    Загружает подготовленные признаки из .npy файла, применяет обученную модель Linear Regression
-    и возвращает список предсказанных зарплат в рублях.
-
-    Предполагается, что 'x_data.npy' уже содержит трансформированные и масштабированные признаки,
-    подготовленные скриптом 'parse_data.py'.
-
-    Args:
-        npy_path: Путь к файлу x_data.npy, содержащему матрицу признаков.
-
-    Returns:
-        Список предсказанных зарплат в рублях (List[float]), округленных до двух знаков после запятой.
-
-    Raises:
-        FileNotFoundError: Если файл x_data.npy или model.pkl не найдены.
-        Exception: В случае других ошибок во время загрузки или предсказания.
+    Функция запуска пайплайна предсказания зарплат.
+    Парсит аргументы командной строки, конфигурирует цепочку обработчиков (NpyLoader -> PredictorHandler),
+    и запускает процесс предсказания.
     """
-    print(f"\n--- Запуск предсказания зарплат для '{os.path.basename(npy_path)}' ---")
-
-    # 1. Проверка наличия файла признаков
-    if not os.path.exists(npy_path):
-        raise FileNotFoundError(f"Файл признаков '{npy_path}' не найден. Убедитесь, что он существует.")
-
-    # 2. Проверка наличия обученной модели
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(f"Файл модели '{MODEL_PATH}' не найден. Сначала запустите скрипт 'train_model.py'.")
-
-    # 3. Загрузка массива признаков
-    try:
-        x_data_to_predict = np.load(npy_path)
-    except Exception as e:
-        raise Exception(f"Ошибка при загрузке .npy файла: {e}")
-
-    # 4. Загрузка обученной модели
-    try:
-        with open(MODEL_PATH, 'rb') as f:
-            model = pickle.load(f)
-    except Exception as e:
-        raise Exception(f"Ошибка при загрузке модели: {e}")
-
-    # 5. Выполнение предсказания
-    predictions = model.predict(x_data_to_predict)
-    print(f"Предсказания выполнены для {len(predictions)} образцов.")
-
-    # 6. Преобразование в List[float] с округлением до двух знаков
-    # Принудительно приводим к типу float, как того требует задание
-    formatted_predictions = [float(round(val, 2)) for val in predictions]
-    return formatted_predictions
-
-if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="HH Salary Predictor: Предсказание зарплат на основе файла .npy."
     )
@@ -69,16 +21,24 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Проверка, что входной файл имеет расширение .npy
+    # Предварительные проверки (хотя хендлеры тоже проверяют, это хорошая практика для top-level скрипта)
+    if not os.path.exists(args.npy_path):
+        print(f"Ошибка: Файл признаков '{args.npy_path}' не найден.")
+        sys.exit(1)
     if not args.npy_path.endswith('.npy'):
         print(f"Ошибка: Ожидается файл с расширением .npy, но получен '{args.npy_path}'.")
         sys.exit(1)
 
+    # Создание цепочки обработчиков
+    npy_loader = NpyLoader()
+    predictor = PredictorHandler() # Использует путь по умолчанию 'resources/model.pkl'
+    npy_loader.set_next(predictor)
+
     try:
-        # Вызов функции предсказания и вывод результата
-        results = predict_salary(args.npy_path)
+        # Запуск пайплайна и получение результатов
+        results: List[float] = npy_loader.handle(args.npy_path)
+
         print("\n--- Предсказанные зарплаты (List[float]) ---")
-        # Выводим первые 10 значений для примера, если их много, иначе весь список
         if len(results) > 10:
             print(results[:10])
             print(f"... и еще {len(results) - 10} значений.")
@@ -86,6 +46,12 @@ if __name__ == "__main__":
             print(results)
         print("---------------------------------------------")
 
-    except (FileNotFoundError, Exception) as e:
+    except (FileNotFoundError, RuntimeError) as e: # Ловим конкретные ошибки от хендлеров
         print(f"Критическая ошибка: {e}")
         sys.exit(1)
+    except Exception as e: # Для любых других непредвиденных ошибок
+        print(f"Произошла неизвестная критическая ошибка в пайплайне: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    run_prediction()
